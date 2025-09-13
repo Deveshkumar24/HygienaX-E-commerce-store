@@ -1,0 +1,50 @@
+{% extends "layout.html" %}
+{% block title %}Shipping Address{% endblock %}
+{% block content %}
+<div class="bg-white p-8 rounded-xl shadow-lg max-w-2xl mx-auto">
+    <h1 class="text-3xl font-extrabold text-gray-800 mb-6 text-center border-b pb-4">Enter Shipping Details</h1>
+    
+    <form action="{{ url_for('checkout') }}" method="POST">
+        <div class="mb-4">
+            <label for="name" class="block text-gray-700 text-sm font-bold mb-2">Full Name</label>
+            <input type="text" id="name" name="name" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter your full name" required>
+        </div>
+        <div class="mb-4">
+            <label for="phone_number" class="block text-gray-700 text-sm font-bold mb-2">Phone Number</label>
+            <input type="tel" id="phone_number" name="phone_number" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter your phone number" required>
+        </div>
+        <div class="mb-4">
+            <label for="address_line1" class="block text-gray-700 text-sm font-bold mb-2">Address Line 1</label>
+            <input type="text" id="address_line1" name="address_line1" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="House/Flat/Apartment No., Street" required>
+        </div>
+        <div class="mb-4">
+            <label for="address_line2" class="block text-gray-700 text-sm font-bold mb-2">Address Line 2 (Optional)</label>
+            <input type="text" id="address_line2" name="address_line2" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Colony, Area, etc.">
+        </div>
+        <div class="grid grid-cols-2 gap-4 mb-4">
+            <div>
+                <label for="city" class="block text-gray-700 text-sm font-bold mb-2">City</label>
+                <input type="text" id="city" name="city" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="City" required>
+            </div>
+            <div>
+                <label for="state" class="block text-gray-700 text-sm font-bold mb-2">State</label>
+                <input type="text" id="state" name="state" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="State" required>
+            </div>
+        </div>
+        <div class="grid grid-cols-2 gap-4 mb-6">
+            <div>
+                <label for="pincode" class="block text-gray-700 text-sm font-bold mb-2">Pincode</label>
+                <input type="text" id="pincode" name="pincode" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Pincode" required>
+            </div>
+            <div>
+                <label for="landmark" class="block text-gray-700 text-sm font-bold mb-2">Landmark (Optional)</label>
+                <input type="text" id="landmark" name="landmark" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Landmark">
+            </div>
+        </div>
+        
+        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg transition-colors text-lg">
+            Proceed to Payment
+        </button>
+    </form>
+</div>
+{% endblock %}

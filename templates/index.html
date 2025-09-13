@@ -1,0 +1,34 @@
+{% extends "layout.html" %}
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<!-- Offer Banner -->
+<div class="bg-blue-600 text-white p-6 rounded-lg mb-8 text-center shadow-lg">
+    <h2 class="text-3xl font-extrabold tracking-tight">SPARKLE & SHINE</h2>
+    <p class="mt-2 text-lg">15% OFF on purchase of any 4 items!</p>
+    <p class="text-sm mt-1">Get your home and workplace fresh and spotless with our 5 Litre packs!</p>
+</div>
+
+<!-- Products Section -->
+<h2 class="text-3xl font-bold text-center text-gray-800 mb-8">Our Products</h2>
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+    {% for product in products %}
+    <div class="bg-white rounded-xl shadow-md overflow-hidden transform hover:scale-105 transition-transform duration-300 flex flex-col">
+        <div class="h-72 w-full flex items-center justify-center bg-gray-100 p-2">
+            <img class="h-full w-full object-contain" src="{{ url_for('static', filename='images/' + product.image_file) }}" alt="{{ product.name }}">
+        </div>
+        <div class="p-6 flex flex-col flex-grow">
+            <h3 class="text-xl font-bold text-gray-800">{{ product.name }}</h3>
+            <p class="text-2xl font-extrabold text-gray-900 mt-2 mb-4">₹{{ "%.2f"|format(product.price) }}</p>
+            <div class="mt-auto">
+                <a href="{{ url_for('product', product_id=product.id) }}" class="block w-full text-center bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors">
+                    View Details
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
+

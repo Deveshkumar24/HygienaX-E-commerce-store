@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Hygienax{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div class="container mx-auto px-4 min-h-screen flex flex-col">
+        
+        <header class="bg-gray-800 shadow-md rounded-b-lg mb-8 sticky top-0 z-50">
+            <nav class="container mx-auto px-6 py-3">
+                <div class="flex justify-between items-center">
+                    
+                    <a href="{{ url_for('home') }}" class="flex items-center flex-shrink-0">
+                        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Hygienax Logo" class="h-14 mr-3">
+                        <span class="text-2xl font-bold text-white hidden sm:block">HYGIENAX</span>
+                    </a>
+                    
+                    
+                    <div class="w-full max-w-md mx-4">
+                        <form action="{{ url_for('home') }}" method="GET" class="relative">
+                            <input type="search" name="search" placeholder="Search for products..." value="{{ search_query or '' }}"
+                                class="w-full bg-gray-700 text-white rounded-lg py-2 pl-4 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <button type="submit" class="absolute right-0 top-0 mt-2 mr-3">
+                                <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                            </button>
+                        </form>
+                    </div>
+                    
+                   
+                    <div class="flex items-center space-x-4 flex-shrink-0">
+                        <a href="{{ url_for('home') }}" class="text-gray-300 hover:text-white transition-colors hidden md:block">Home</a>
+                        
+                        {% if current_user.is_authenticated %}
+                            <a href="{{ url_for('orders') }}" class="text-gray-300 hover:text-white transition-colors">My Orders</a>
+                            <a href="{{ url_for('cart') }}" class="relative text-gray-300 hover:text-white transition-colors">
+                                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                                {% if cart_item_count > 0 %}
+                                <span class="absolute -top-2 -right-3 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">{{ cart_item_count }}</span>
+                                {% endif %}
+                            </a>
+                            <a href="{{ url_for('logout') }}" class="text-gray-300 hover:text-white transition-colors">Logout</a>
+                        {% else %}
+                            <a href="{{ url_for('login') }}" class="text-gray-300 hover:text-white transition-colors">Login</a>
+                            <a href="{{ url_for('signup') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Sign Up</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </nav>
+        </header>
+
+        
+        <main class="flex-grow">
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                    <div class="p-4 mb-4 text-sm rounded-lg {% if category == 'error' %} bg-red-100 text-red-700 {% else %} bg-green-100 text-green-700 {% endif %}" role="alert">
+                        {{ message }}
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </main>
+
+        <!-- Footer -->
+        <footer class="bg-gray-800 text-white text-center p-4 mt-8 rounded-t-lg">
+            <p>&copy; 2025 Hygienax Premium Products. All Rights Reserved.</p>
+            <div class="mt-2 space-x-4">
+                <a href="{{ url_for('about') }}" class="text-gray-400 hover:text-white transition-colors">About Us</a>
+                <span class="text-gray-500">|</span>
+                <a href="{{ url_for('contact') }}" class="text-gray-400 hover:text-white transition-colors">Contact Us</a>
+            </div>
+        </footer>
+    </div>
+
+</body>
+</html>
+
