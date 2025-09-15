@@ -8,7 +8,7 @@ from functools import wraps
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key' 
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:kumar2924@localhost/hygienax_db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://deveshkyash:kumar2924@deveshkyash.mysql.pythonanywhere-services.com/deveshkyash$hygienax_db'
 
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
