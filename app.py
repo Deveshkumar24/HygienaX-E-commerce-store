@@ -6,10 +6,12 @@ import os
 from functools import wraps
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your_secret_key' 
+app.config['SECRET_KEY'] = 'your_secret_key' # Replace with a real secret key
 
+# === YAHAN BADLAAV KIYA GAYA HAI (SQLite -> MySQL) ===
+# Replace 'your_mysql_password' with your actual MySQL root password
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:kumar2924@localhost/hygienax_db'
-
+# ======================================================
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -17,12 +19,12 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
-
+# --- Database Models ---
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False)
-    password = db.Column(db.String(150), nullable=False)
+    password = db.Column(db.String(255), nullable=False)
     cart_items = db.relationship('Cart', backref='customer', lazy=True)
     orders = db.relationship('Order', backref='customer', lazy=True)
 
@@ -45,16 +47,17 @@ class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     total_price = db.Column(db.Float, nullable=False)
-    name = db.Column(db.String(100), nullable=False)  # Nayi Line
-    phone_number = db.Column(db.String(20), nullable=False) # Nayi Line
-    address_line1 = db.Column(db.String(255), nullable=False) # Nayi Line
-    address_line2 = db.Column(db.String(255), nullable=True) # Nayi Line
-    city = db.Column(db.String(100), nullable=False) # Nayi Line
-    state = db.Column(db.String(100), nullable=False) # Nayi Line
-    pincode = db.Column(db.String(10), nullable=False) # Nayi Line
-    landmark = db.Column(db.String(255), nullable=True) # Nayi Line
+    name = db.Column(db.String(100), nullable=False)
+    phone_number = db.Column(db.String(20), nullable=False)
+    address_line1 = db.Column(db.String(255), nullable=False)
+    address_line2 = db.Column(db.String(255), nullable=True)
+    city = db.Column(db.String(100), nullable=False)
+    state = db.Column(db.String(100), nullable=False)
+    pincode = db.Column(db.String(10), nullable=False)
+    landmark = db.Column(db.String(255), nullable=True)
     order_date = db.Column(db.DateTime, server_default=db.func.now())
     items = db.relationship('OrderItem', backref='order', lazy=True)
+    payment_method = db.Column(db.String(50), nullable=True) # Payment method ko save karo
 
 class OrderItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -74,7 +77,7 @@ def inject_cart_item_count():
         return dict(cart_item_count=item_count)
     return dict(cart_item_count=0)
 
-
+# --- Main Routes ---
 @app.route('/')
 def home():
     search_query = request.args.get('search')
@@ -90,7 +93,7 @@ def product(product_id):
     product = Product.query.get_or_404(product_id)
     return render_template('product_detail.html', product=product)
 
-
+# --- Auth Routes ---
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
@@ -133,7 +136,7 @@ def logout():
     logout_user()
     return redirect(url_for('home'))
 
-
+# --- Cart and Order Routes ---
 @app.route('/add_to_cart/<int:product_id>', methods=['POST'])
 @login_required
 def add_to_cart(product_id):
@@ -211,99 +214,85 @@ def checkout():
         return redirect(url_for('home'))
 
     if request.method == 'POST':
-        name = request.form.get('name')
-        phone_number = request.form.get('phone_number')
-        address_line1 = request.form.get('address_line1')
-        address_line2 = request.form.get('address_line2')
-        city = request.form.get('city')
-        state = request.form.get('state')
-        pincode = request.form.get('pincode')
-        landmark = request.form.get('landmark')
-        
-        session['name'] = name
-        session['phone_number'] = phone_number
-        session['address_line1'] = address_line1
-        session['address_line2'] = address_line2
-        session['city'] = city
-        session['state'] = state
-        session['pincode'] = pincode
-        session['landmark'] = landmark
+        session['shipping_address'] = {
+            'name': request.form.get('name'),
+            'phone': request.form.get('phone_number'),
+            'address1': request.form.get('address_line1'),
+            'address2': request.form.get('address_line2', ''),
+            'city': request.form.get('city'),
+            'state': request.form.get('state'),
+            'pincode': request.form.get('pincode'),
+            'landmark': request.form.get('landmark', '')
+        }
         return redirect(url_for('payment'))
 
-    return render_template('address.html') 
+    return render_template('address.html')
 
 @app.route('/payment')
 @login_required
 def payment():
-    cart_items = Cart.query.filter_by(user_id=current_user.id).all()
-    if not cart_items:
-        flash("Your cart is empty.", "info")
-        return redirect(url_for('home'))
+    address = session.get('shipping_address')
+    if not address:
+        return redirect(url_for('checkout'))
 
+    cart_items = Cart.query.filter_by(user_id=current_user.id).all()
     subtotal = sum(item.product.price * item.quantity for item in cart_items)
     total_quantity = sum(item.quantity for item in cart_items)
-
     discount = 0
     offer_applied = False
-
     if total_quantity >= 4:
         discount = subtotal * 0.15
         offer_applied = True
-
     total_price = subtotal - discount
-
-    return render_template('payment.html', cart_items=cart_items, subtotal=subtotal, discount=discount, total_price=total_price, offer_applied=offer_applied)
+    
+    return render_template('payment.html', cart_items=cart_items, subtotal=subtotal, discount=discount, total_price=total_price, offer_applied=offer_applied, address=address)
 
 
 @app.route('/place_order', methods=['POST'])
 @login_required
 def place_order():
     cart_items = Cart.query.filter_by(user_id=current_user.id).all()
-
     if not cart_items:
         return redirect(url_for('home'))
 
     subtotal = sum(item.product.price * item.quantity for item in cart_items)
     total_quantity = sum(item.quantity for item in cart_items)
-
     discount = 0
     if total_quantity >= 4:
         discount = subtotal * 0.15
-
     total_price = subtotal - discount
-    name = session.get('name')
-    phone_number = session.get('phone_number')
-    address_line1 = session.get('address_line1')
-    address_line2 = session.get('address_line2')
-    city = session.get('city')
-    state = session.get('state')
-    pincode = session.get('pincode')
-    landmark = session.get('landmark')
-
-
-    if not address_line1 or not city or not state or not pincode:
-        flash("Please provide your complete shipping address.", "error")
+    
+    address = session.get('shipping_address')
+    if not address:
+        flash("Shipping address is missing. Please try again.", "error")
         return redirect(url_for('checkout'))
 
-    new_order = Order(user_id=current_user.id, total_price=total_price, name=name, phone_number=phone_number, address_line1=address_line1, address_line2=address_line2, city=city, state=state, pincode=pincode, landmark=landmark)
+    # Payment method ko form se receive karo
+    payment_method = request.form.get('payment_method')
+
+    new_order = Order(
+        user_id=current_user.id, 
+        total_price=total_price,
+        name=address['name'],
+        phone_number=address['phone'],
+        address_line1=address['address1'],
+        address_line2=address['address2'],
+        city=address['city'],
+        state=address['state'],
+        pincode=address['pincode'],
+        landmark=address['landmark'],
+        payment_method=payment_method # Payment method ko save karo
+    )
     db.session.add(new_order)
-    db.session.commit()
+    db.session.commit() 
 
     for item in cart_items:
-        order_item = OrderItem(order_id=new_order.id, product_id=item.product_id, quantity=item.quantity, price=item.product.price)
+        order_item = OrderItem(order_id=new_order.id, product_id=item.product.id, quantity=item.quantity, price=item.product.price)
         db.session.add(order_item)
         db.session.delete(item)
     
     db.session.commit()
-    session.pop('name', None)
-    session.pop('phone_number', None)
-    session.pop('address_line1', None)
-    session.pop('address_line2', None)
-    session.pop('city', None)
-    session.pop('state', None)
-    session.pop('pincode', None)
-    session.pop('landmark', None)
-    
+    session.pop('shipping_address', None) 
     flash('Your order has been placed successfully!', 'success')
     return redirect(url_for('checkout_success'))
 
@@ -345,11 +334,11 @@ def init_db_command():
                 {"name": "Rose Flavoured Phenyl (5L)", "description": "Experience deep cleaning with the enchanting aroma of fresh roses. This floor cleaner not only removes tough stains but also leaves a long-lasting, soothing floral fragrance.", "price": 240.00, "image_file": "floor-cleaner-rose.png"},
                 {"name": "Toilet Cleaner (5L)", "description": "With 10x cleaning power, our Toilet Cleaner effortlessly removes the toughest stains and limescale. Its advanced formula kills 99.9% of germs, ensuring a sparkling clean and hygienic toilet.", "price": 350.00, "image_file": "toilet-cleaner.png"},
                 {"name": "Dishwash Liquid (5L)", "description": "Tough on grease but gentle on hands, our Active Lemon Dishwash Liquid makes your utensils shine. Its powerful formula cuts through grime, leaving a refreshing lemon scent.", "price": 350.00, "image_file": "dishwash.jpg"},
-                {"name": "Glass Cleaner (5L)", "description": "Get a streak-free shine every time with our Glass Cleaner. Its unique formula quickly removes dirt, grime, and fingerprints from glass surfaces, leaving them crystal clear.", "price": 350.00, "image_file": "glass-cleaner.png"},
-                {"name": "Rose Handwash (5L)", "description": "Infused with the delicate fragrance of rose petals, this handwash cleanses gently while moisturizing your skin. It leaves your hands feeling soft, fresh, and beautifully scented.", "price": 350.00, "image_file": "handwash-rose.png"},
-                {"name": "Apple Handwash (5L)", "description": "Fresh and pure anti-bacterial handwash with the crisp scent of green apples. It effectively cleanses and protects your hands, leaving them feeling refreshed and hygienic.", "price": 350.00, "image_file": "handwash-apple.jpg"},
-                {"name": "Herbal Handwash (5L)", "description": "5x more power with a fresh herbal fragrance. This anti-bacterial handwash is enriched with natural extracts to keep your hands safe, clean, and smelling great.", "price": 350.00, "image_file": "handwash-herbal.png"},
-                {"name": "Orange Handwash (5L)", "description": "Safe-to-use multi-purpose handwash with a zesty orange fragrance. Its rich lather cleanses thoroughly while being gentle on the skin, perfect for the whole family.", "price": 350.00, "image_file": "handwash-orange.png"}
+                {"name": "Glass Cleaner (5L)", "description": "Get a streak-free shine every time with our Glass Cleaner. Perfect for windows, mirrors, and other glass surfaces, it leaves everything sparkling clean without any residue.", "price": 350.00, "image_file": "glass-cleaner.png"},
+                {"name": "Rose Handwash (5L)", "description": "Infused with the gentle fragrance of roses, this antibacterial handwash cleanses your hands effectively while keeping them soft and moisturized. Ideal for everyday use.", "price": 240.00, "image_file": "handwash-rose.png"},
+                {"name": "Apple Handwash (5L)", "description": "Fresh and pure anti-bacterial handwash with a crisp green apple scent. Its 5x power formula ensures your hands are clean, fresh, and germ-free.", "price": 350.00, "image_file": "handwash-apple.jpg"},
+                {"name": "Herbal Handwash (5L)", "description": "5x more power with a fresh herbal fragrance. This anti-bacterial handwash is safe to use and leaves your hands feeling fresh, pure, and thoroughly clean.", "price": 350.00, "image_file": "handwash-herbal.png"},
+                {"name": "Orange Handwash (5L)", "description": "Safe-to-use multi-purpose handwash with a zesty orange fragrance. Its 5x power anti-bacterial formula provides a fresh and pure clean every time.", "price": 350.00, "image_file": "handwash-orange.png"}
             ]
 
             for p_data in products_data:
