@@ -6,20 +6,15 @@ import os
 from functools import wraps
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your_secret_key' # Replace with a real secret key
-
-# === YAHAN BADLAAV KIYA GAYA HAI (SQLite -> MySQL) ===
-# Replace 'your_mysql_password' with your actual MySQL root password
+app.config['SECRET_KEY'] = 'your_secret_key'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:kumar2924@localhost/hygienax_db'
-# ======================================================
-
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
-# --- Database Models ---
+
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), nullable=False)
@@ -57,7 +52,7 @@ class Order(db.Model):
     landmark = db.Column(db.String(255), nullable=True)
     order_date = db.Column(db.DateTime, server_default=db.func.now())
     items = db.relationship('OrderItem', backref='order', lazy=True)
-    payment_method = db.Column(db.String(50), nullable=True) # Payment method ko save karo
+    payment_method = db.Column(db.String(50), nullable=True)
 
 class OrderItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -66,9 +61,11 @@ class OrderItem(db.Model):
     quantity = db.Column(db.Integer, nullable=False)
     price = db.Column(db.Float, nullable=False)
 
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
 
 @app.context_processor
 def inject_cart_item_count():
@@ -77,7 +74,7 @@ def inject_cart_item_count():
         return dict(cart_item_count=item_count)
     return dict(cart_item_count=0)
 
-# --- Main Routes ---
+
 @app.route('/')
 def home():
     search_query = request.args.get('search')
@@ -85,15 +82,15 @@ def home():
         products = Product.query.filter(Product.name.ilike(f'%{search_query}%')).all()
     else:
         products = Product.query.all()
-    
     return render_template('index.html', products=products, search_query=search_query)
+
 
 @app.route('/product/<int:product_id>')
 def product(product_id):
     product = Product.query.get_or_404(product_id)
     return render_template('product_detail.html', product=product)
 
-# --- Auth Routes ---
+
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
@@ -115,20 +112,22 @@ def signup():
         return redirect(url_for('home'))
     return render_template('signup.html')
 
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
-        
+
         user = User.query.filter_by(email=email).first()
         if not user or not check_password_hash(user.password, password):
             flash('Please check your login details and try again.', 'error')
             return redirect(url_for('login'))
-        
+
         login_user(user)
         return redirect(url_for('home'))
     return render_template('login.html')
+
 
 @app.route('/logout')
 @login_required
@@ -136,7 +135,7 @@ def logout():
     logout_user()
     return redirect(url_for('home'))
 
-# --- Cart and Order Routes ---
+
 @app.route('/add_to_cart/<int:product_id>', methods=['POST'])
 @login_required
 def add_to_cart(product_id):
@@ -148,29 +147,31 @@ def add_to_cart(product_id):
     else:
         new_item = Cart(user_id=current_user.id, product_id=product.id, quantity=1)
         db.session.add(new_item)
-    
+
     db.session.commit()
     flash(f'{product.name} has been added to your cart.', 'success')
     return redirect(request.referrer or url_for('home'))
+
 
 @app.route('/cart')
 @login_required
 def cart():
     cart_items = Cart.query.filter_by(user_id=current_user.id).all()
-    
+
     subtotal = sum(item.product.price * item.quantity for item in cart_items)
     total_quantity = sum(item.quantity for item in cart_items)
-    
+
     discount = 0
     offer_applied = False
-    
+
     if total_quantity >= 4:
         discount = subtotal * 0.15
         offer_applied = True
-        
+
     total_price = subtotal - discount
-    
+
     return render_template('cart.html', cart_items=cart_items, subtotal=subtotal, discount=discount, total_price=total_price, offer_applied=offer_applied)
+
 
 @app.route('/remove_from_cart/<int:item_id>', methods=['POST'])
 @login_required
@@ -178,11 +179,12 @@ def remove_from_cart(item_id):
     item_to_remove = Cart.query.get_or_404(item_id)
     if item_to_remove.user_id != current_user.id:
         return redirect(url_for('cart'))
-    
+
     db.session.delete(item_to_remove)
     db.session.commit()
     flash('Item removed from your cart.', 'success')
     return redirect(url_for('cart'))
+
 
 @app.route('/update_cart/<int:item_id>/<action>', methods=['POST'])
 @login_required
@@ -204,6 +206,7 @@ def update_cart(item_id, action):
 
     db.session.commit()
     return redirect(url_for('cart'))
+
 
 @app.route('/checkout', methods=['GET', 'POST'])
 @login_required
@@ -228,6 +231,7 @@ def checkout():
 
     return render_template('address.html')
 
+
 @app.route('/payment')
 @login_required
 def payment():
@@ -236,15 +240,19 @@ def payment():
         return redirect(url_for('checkout'))
 
     cart_items = Cart.query.filter_by(user_id=current_user.id).all()
+
     subtotal = sum(item.product.price * item.quantity for item in cart_items)
     total_quantity = sum(item.quantity for item in cart_items)
+
     discount = 0
     offer_applied = False
+
     if total_quantity >= 4:
         discount = subtotal * 0.15
         offer_applied = True
+
     total_price = subtotal - discount
-    
+
     return render_template('payment.html', cart_items=cart_items, subtotal=subtotal, discount=discount, total_price=total_price, offer_applied=offer_applied, address=address)
 
 
@@ -257,21 +265,18 @@ def place_order():
 
     subtotal = sum(item.product.price * item.quantity for item in cart_items)
     total_quantity = sum(item.quantity for item in cart_items)
-    discount = 0
-    if total_quantity >= 4:
-        discount = subtotal * 0.15
+    discount = subtotal * 0.15 if total_quantity >= 4 else 0
     total_price = subtotal - discount
-    
+
     address = session.get('shipping_address')
     if not address:
         flash("Shipping address is missing. Please try again.", "error")
         return redirect(url_for('checkout'))
 
-    # Payment method ko form se receive karo
     payment_method = request.form.get('payment_method')
 
     new_order = Order(
-        user_id=current_user.id, 
+        user_id=current_user.id,
         total_price=total_price,
         name=address['name'],
         phone_number=address['phone'],
@@ -281,18 +286,18 @@ def place_order():
         state=address['state'],
         pincode=address['pincode'],
         landmark=address['landmark'],
-        payment_method=payment_method # Payment method ko save karo
+        payment_method=payment_method
     )
     db.session.add(new_order)
-    db.session.commit() 
+    db.session.commit()
 
     for item in cart_items:
         order_item = OrderItem(order_id=new_order.id, product_id=item.product.id, quantity=item.quantity, price=item.product.price)
         db.session.add(order_item)
         db.session.delete(item)
-    
+
     db.session.commit()
-    session.pop('shipping_address', None) 
+    session.pop('shipping_address', None)
     flash('Your order has been placed successfully!', 'success')
     return redirect(url_for('checkout_success'))
 
@@ -302,10 +307,11 @@ def place_order():
 def checkout_success():
     return render_template('checkout_success.html')
 
-# --- Info Pages Routes ---
+
 @app.route('/about')
 def about():
     return render_template('about.html')
+
 
 @app.route('/contact', methods=['GET', 'POST'])
 def contact():
@@ -314,20 +320,20 @@ def contact():
         return redirect(url_for('contact'))
     return render_template('contact.html')
 
+
 @app.route('/orders')
 @login_required
 def orders():
     user_orders = Order.query.filter_by(user_id=current_user.id).order_by(Order.order_date.desc()).all()
     return render_template('orders.html', orders=user_orders)
 
-# --- DB Command ---
+
 @app.cli.command("init-db")
 def init_db_command():
-    """Initializes the database."""
     with app.app_context():
         db.drop_all()
         db.create_all()
-        
+
         if Product.query.first() is None:
             products_data = [
                 {"name": "White Phenyl (5L)", "description": "Our classic White Phenyl is a powerful disinfectant designed to eliminate germs and leave your floors sparkling clean. Its timeless, fresh fragrance ensures a hygienic and pleasant environment.", "price": 180.00, "image_file": "floor-cleaner-white.png"},
@@ -344,11 +350,12 @@ def init_db_command():
             for p_data in products_data:
                 product = Product(name=p_data['name'], description=p_data['description'], price=p_data['price'], image_file=p_data['image_file'])
                 db.session.add(product)
-            
+
             db.session.commit()
-            print("Database initialized and products added.")
+
         else:
             print("Database already contains products.")
+
 
 if __name__ == '__main__':
     app.run(debug=True)
