@@ -6,8 +6,14 @@ import os
 from functools import wraps
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your_secret_key'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:kumar2924@localhost/hygienax_db'
+
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your_secret_key_local_fallback_PLEASE_CHANGE') 
+
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
+    'SQLALCHEMY_DATABASE_URI', 
+    'sqlite:///site.db' # Fallback for local testing if DB URL is not set
+)
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -355,7 +361,3 @@ def init_db_command():
 
         else:
             print("Database already contains products.")
-
-
-if __name__ == '__main__':
-    app.run(debug=True)
